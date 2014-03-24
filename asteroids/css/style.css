@@ -3,6 +3,7 @@
 	margin: 0;
 }
 
+/* Center canvas and stuff */
 canvas {
 	background-color: #000;
 	display: block;

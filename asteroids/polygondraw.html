@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>PolygonDraw</title>
+
+	<meta name="viewport" content="user-scalable=no" />
+	<link href="https://netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
+	
+	<style>*{padding:0;margin:0}input:focus,textarea:focus{outline:0}input[type=range]{-webkit-appearance:none;background-color:#ccc;height:2px;margin:5px 0}input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;border-radius:6px;border:1px solid #ccc;background-color:#fff;width:12px;height:12px}canvas{background-color:#fff;display:block;position:absolute;margin:auto;top:5px;left:5px;border:1px solid #ccc}div{display:block;position:absolute;right:5px;top:5px;width:290px;border:1px solid #ccc}ul{position:absolute}ol{border:1px solid #ccc;width:268px;position:absolute}ol li{padding:1px 10px;border:none;border-right:1px solid #e0e0e0}li{color:#555;display:inline-block;border:1px solid #e0e0e0;padding:5px 10px;margin-right:-1px;cursor:pointer}li:hover{background-color:#ececec}ul li:first-child{border-top-left-radius:4px;border-bottom-left-radius:4px}ul li:last-child{border-top-right-radius:4px;border-bottom-right-radius:4px}input,textarea{position:absolute;bottom:10px;right:10px;width:270px;max-width:270px;border:1px solid #ccc;box-sizing:border-box;-moz-box-sizing:border-box}textarea{resize:none;top:50px;padding:10px;bottom:110px}textarea:focus{outline:0}label{border:1px solid #ccc}</style>
+</head>
+<body>
+
+<!-- GUI -->
+<canvas></canvas>
+<div>
+	<form>
+		<textarea name="coords" readonly></textarea>
+		<input type="range" name="zoom" min="15" max="40">
+	</form>
+	<ul style="top:10px;left:10px">
+		<li id="arrows"><i class="fa fa-arrows"></i></li><li id="pencil"><i class="fa fa-pencil"></i>
+	</ul>
+	<ul style="top:10px;right:11px;">
+		<li id="undo"><i class="fa fa-undo"></i></li><li><i class="fa fa-repeat"></i></li><li id="refresh"><i class="fa fa-refresh"></i></li>
+	</ul>
+	<ol style="bottom:89px;left:10px;">
+		<li><i class="fa fa-file fa-rotate-180"></i></li><li><i class="fa fa-trash-o"></i></li>
+	</ol>
+	<ul style="bottom:40px;right:11px">
+		<li id="copy"><i class="fa fa-copy"></i></li><li id="code"><i class="fa fa-code"></i></li>
+	</ul>
+</div>
+
+<style>
+img {
+	display: block;
+	position: absolute;
+	opacity: 1;
+	top: 25px;
+	left: 10px;
+	width: auto;
+}
+</style>
+
+<!-- Insert Image Below -->
+<!-- ================== -->
+
+<!-- Code -->
+<script>
+(function() {
+
+// Init GUI Components
+var canvas = document.querySelector("canvas");
+var div = document.querySelector("div");
+var form = document.querySelector("form");
+var text = document.querySelector("textarea");
+var ctx = canvas.getContext("2d");
+
+// Global vars
+var Tools = {
+	MOVE: 0,
+	LINE: 1
+}
+var Styles = {
+	ARRAY: 0,
+	ONE_ARRAY: 1,
+	NORMALIZED: 2,
+	ONE_NORMALIZED: 3
+}
+var shape, grid, currentTool = Tools.LINE, currentStyle = Styles.ARRAY;
+
+
+
+// Functions
+function windowResize() {
+	canvas.width = window.innerWidth - 309;
+	canvas.height = window.innerHeight - 12;
+	div.setAttribute("style", "height:" + canvas.height + "px");
+	grid.set(parseInt(form.zoom.value));
+	shape.draw(grid);
+}
+
+function drawCoords(x, y) {
+	var c = grid.translate(x, y);
+	ctx.save();
+	ctx.fillStyle = "#000";
+	ctx.fillText("("+c.x+", "+c.y+")", 10, 15);
+	ctx.restore();
+}
+
+function drawPoints() {
+	if (shape.last < 0) {
+		text.value = "";
+		return;
+	}
+	var s = "[";
+	var nb = "\n";
+	switch (currentStyle) {
+	
+		case Styles.ARRAY:
+			s += "\n";
+			for (var i = 0; i <= shape.last; i++) {
+				var p = shape.points[i];
+				s += "\t" + p.x + ", " + p.y + ",\n";
+			}
+			break;
+
+		case Styles.ONE_ARRAY:
+			for (var i = 0; i <= shape.last; i++) {
+				var p = shape.points[i];
+				s += p.x+","+p.y+",";
+			}
+			nb = "";
+			break;
+
+		case Styles.NORMALIZED:
+			var l = 0;
+			s += "\n";
+			for (var i = 0; i <= shape.last; i++) {
+				var p = shape.points[i];
+				var l = Math.max(l, Math.sqrt(p.x*p.x + p.y*p.y));
+			}
+			for (var i = 0; i <= shape.last; i++) {
+				var p = shape.points[i];
+				s += "\t" + p.x/l + ",\n\t" + p.y/l + ",\n";
+			}
+			break;
+
+		case Styles.ONE_NORMALIZED:
+			var l = 0;
+			for (var i = 0; i <= shape.last; i++) {
+				var p = shape.points[i];
+				var l = Math.max(l, Math.sqrt(p.x*p.x + p.y*p.y));
+			}
+			for (var i = 0; i <= shape.last; i++) {
+				var p = shape.points[i];
+				s += p.x/l+","+p.y/l+",";
+			}
+			nb = "";
+			break;
+	}
+	text.value = s.replace(/,([^,]*)$/, '') + nb + "]";
+}
+
+// DataObjs
+var Shape = function() {
+	this.reset();
+};
+Shape.prototype = {
+	reset: function() {
+		this.points = [];
+		this.last = -1;
+	},
+
+	addPoint: function(p) {
+		if (this.last >= 0 &&
+		   (p.x === this.getLast().x &&
+			p.y === this.getLast().y)
+		) {
+			return;
+		}
+		this.points.push(p);
+		this.last = this.points.length - 1;
+	},
+	
+	getLast: function() {
+		return {
+			x: this.points[this.last].x,
+			y: this.points[this.last].y
+		}
+	},
+
+	draw: function(grid_) {
+		if (this.last < 1) {
+			return;
+		}
+		ctx.save();
+		ctx.beginPath();
+
+		for (var i = 0; i <= this.last; i++) {
+			var p = grid_.toPoint(this.points[i]);
+			if (i === 0) {
+				ctx.moveTo(p.x, p.y);
+				continue;
+			}
+			ctx.lineTo(p.x, p.y);
+		}
+
+		ctx.stroke();
+		ctx.restore();
+	}
+};
+
+
+var Grid = function() {
+	this.canvas = document.createElement("canvas");
+	this.ctx = this.canvas.getContext("2d");
+};
+Grid.prototype = {
+	set: function(size) {
+		this.size = size;
+
+		var wt = Math.ceil(canvas.width / size);
+		var ht = Math.ceil(canvas.height / size);
+		this.width = (wt + wt%2) * size + 1;
+		this.height = (ht + ht%2) * size + 1;
+
+		this.x = Math.round((canvas.width - this.width)/2);
+		this.y = Math.round((canvas.height - this.height)/2);
+
+		this.origo = {
+			x: Math.round(this.width/(this.size*2)),
+			y: Math.round(this.height/(this.size*2))
+		};
+
+		this.canvas.width = this.width;
+		this.canvas.height = this.height;
+
+		this.createGrid();
+		this.draw();
+	},
+
+	createGrid: function() {
+		var x = 0.5,
+			y = 0.5,
+			w = this.width-1,
+			h = this.height-1;
+
+		this.ctx.save();
+		this.ctx.strokeStyle = "#e4e4e4";
+		this.ctx.fillStyle = "#fff";
+		this.ctx.fillRect(0, 0, this.width, this.height);
+
+		this.ctx.beginPath();
+		this.ctx.rect(x, y, w, h);
+		while (x < w) {
+			x += this.size;
+			this.ctx.moveTo(x, y);
+			this.ctx.lineTo(x, y+h);
+		}
+		x = 0.5;
+		while (y < h) {
+			y += this.size;
+			this.ctx.moveTo(x, y);
+			this.ctx.lineTo(x+w, y);
+		}
+		this.ctx.stroke();
+
+		this.ctx.beginPath();
+		this.ctx.fillStyle = "#00f";
+		this.ctx.arc(this.origo.x * this.size + 0.5, this.origo.y * this.size + 0.5, 3, 0, 2*Math.PI);
+		this.ctx.fill();
+
+		this.ctx.restore();
+	},
+
+	draw: function() {
+		ctx.drawImage(this.canvas, this.x, this.y);
+	},
+
+	translate: function(x, y) {
+
+		x = Math.round((x - this.x) / this.size);
+		y = Math.round((y - this.y) / this.size);
+
+		return {
+			x: x - this.origo.x,
+			y: y - this.origo.y
+		}
+	},
+
+	toPoint: function(p) {
+		return {
+			x: (p.x + this.origo.x) * this.size + this.x + 0.5,
+			y: (p.y + this.origo.y) * this.size + this.y + 0.5
+		}
+	}
+};
+
+
+// Setup
+
+shape = new Shape();
+grid = new Grid();
+
+windowResize();
+
+window.onresize = windowResize
+
+form.zoom.onchange = function() {
+	ctx.clearRect(0, 0, canvas.width, canvas.height);
+	grid.set(parseInt(this.value));
+	shape.draw(grid);
+}
+
+window.onmousedown = function(evt) {
+	var x = evt.x - 5;
+	var y = evt.y - 5;
+
+	if (0 > x || canvas.width < x ||
+		0 > y || canvas.height < y
+	) {
+		return;
+	}
+
+	if (currentTool === Tools.LINE) {
+		var c = grid.translate(x, y);
+
+		shape.addPoint(c);
+		if (shape.last > 0 &&
+			c.x === shape.points[0].x &&
+			c.y === shape.points[0].y
+		) {
+			currentTool = Tools.MOVE;
+		}
+
+		grid.draw();
+		shape.draw(grid);
+		drawPoints();
+		drawCoords(x, y);
+	}
+}
+
+window.onmousemove = function(evt) {
+	var x = evt.x - 5;
+	var y = evt.y - 5;
+
+	if (0 > x || canvas.width < x ||
+		0 > y || canvas.height < y
+	) {
+		return;
+	}
+
+	grid.draw();
+	shape.draw(grid);
+
+	if (currentTool === Tools.LINE && shape.last >= 0) {
+		var c = grid.toPoint(shape.getLast());
+
+		ctx.beginPath();
+		ctx.moveTo(c.x, c.y);
+		ctx.lineTo(x, y);
+		ctx.stroke();
+	}
+
+	drawCoords(x, y);
+}
+
+// Button
+document.getElementById("pencil").onclick = function() {
+	currentTool = Tools.LINE;
+}
+document.getElementById("arrows").onclick = function() {
+	currentTool = Tools.MOVE;
+}
+document.getElementById("code").onclick = function() {
+	currentStyle = (currentStyle + 1) % 4;
+	drawPoints();
+}
+document.getElementById("copy").onclick = function() {
+	text.focus();
+	text.select();
+}
+document.getElementById("refresh").onclick = function() {
+	shape = new Shape();
+	currentTool = Tools.LINE;
+	grid.draw();
+	shape.draw(grid);
+	drawPoints();
+}
+document.getElementById("undo").onclick = function() {
+}
+
+}).call();
+</script>
+</body>
+</html>

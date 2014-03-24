@@ -3,25 +3,43 @@
 <head>
 	<meta charset="UTF-8">
 	<title>Asteroids</title>
-
+	
+	<!-- Stylesheets -->
 	<link rel="stylesheet" href="css/style.css">
 
+
+	<!-- Lib files -->
 	<script src="js/lib/class.js"></script>
 
+	<!-- Before states -->
+	<script src="js/points.js"></script>
 	<script src="js/polygon.js"></script>
-	<script src="js/asteroid.js"></script>
 	<script src="js/ship.js"></script>
+	<script src="js/asteroid.js"></script>
 	<script src="js/bullet.js"></script>
+
+	<!-- States -->
 	<script src="js/state.js"></script>
 	<script src="js/gameState.js"></script>
-	<script src="js/input.js"></script>
+	<script src="js/menuState.js"></script>
+	<script src="js/endState.js"></script>
+
+	<!-- Managers and listeners -->
 	<script src="js/canvas.js"></script>
+	<script src="js/input.js"></script>
+
+	<!-- Main file -->
 	<script src="js/main.js"></script>
+	
 </head>
 <body>
-<script>
-	var game = new Game();
-	game.run();
-</script>
+	<input type="text" id="namefield">
+	<div style="background-color:#fff;position:absolute;top:0;width:200px;height:50px;"></div>
+	
+	<script>
+		// create, initiate and run game
+		var game = new Game();
+		game.run();
+	</script>
 </body>
 </html>
