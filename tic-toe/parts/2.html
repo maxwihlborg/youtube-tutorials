@@ -203,8 +203,6 @@ function Tile(x, y) {
 		var t = anim > 0.5 ? Tile.BLANK : tile;
 		var p = -Math.abs(2*anim - 1) + 1;
 
-		p *= p;
-
 		for (var i = 0; i < 100; i += res) {
 
 			var j = 50 - (anim > 0.5 ? 100 - i : i);
