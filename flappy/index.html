@@ -43,7 +43,7 @@ height,
 fgpos = 0,
 frames = 0,
 score = 0,
-best = 0,
+best = localStorage.getItem("best") || 0,
 
 // State vars //
 
@@ -349,6 +349,7 @@ function update() {
 	} else {
 		// set best score to maximum score
 		best = Math.max(best, score);
+		localStorage.setItem("best", best);
 	}
 	if (currentstate === states.Game) {
 		pipes.update();
