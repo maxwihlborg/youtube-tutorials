@@ -26,7 +26,7 @@ var
 /**
  * Game objects
  */
-screen,
+display,
 input,
 frames,
 spFrame,
@@ -47,7 +47,7 @@ cities;
  */
 function main() {
 	// create game canvas and inputhandeler
-	screen = new Screen(504, 600);
+	display = new Screen(504, 600);
 	input = new InputHandeler();
 
 	// create all sprites fram assets image
@@ -83,8 +83,8 @@ function init() {
 	// create the tank object
 	tank = {
 		sprite: taSprite,
-		x: (screen.width - taSprite.w) / 2,
-		y: screen.height - (30 + taSprite.h)
+		x: (display.width - taSprite.w) / 2,
+		y: display.height - (30 + taSprite.h)
 	};
 
 	// initatie bullet array
@@ -104,7 +104,7 @@ function init() {
 		init: function() {
 			// create canvas and grab 2d context
 			this.canvas = document.createElement("canvas");
-			this.canvas.width = screen.width;
+			this.canvas.width = display.width;
 			this.canvas.height = this.h;
 			this.ctx = this.canvas.getContext("2d");
 
@@ -185,9 +185,9 @@ function run() {
 		update();
 		render();
 
-		window.requestAnimationFrame(loop, screen.canvas);
+		window.requestAnimationFrame(loop, display.canvas);
 	};
-	window.requestAnimationFrame(loop, screen.canvas);
+	window.requestAnimationFrame(loop, display.canvas);
 };
 
 /**
@@ -205,7 +205,7 @@ function update() {
 		tank.x += 4;
 	}
 	// keep the tank sprite inside of the canvas
-	tank.x = Math.max(Math.min(tank.x, screen.width - (30 + taSprite.w)), 30);
+	tank.x = Math.max(Math.min(tank.x, display.width - (30 + taSprite.w)), 30);
 
 	// append new bullet to the bullet array if spacebar is
 	// pressed
@@ -218,7 +218,7 @@ function update() {
 		var b = bullets[i];
 		b.update();
 		// remove bullets outside of the canvas
-		if (b.y + b.height < 0 || b.y > screen.height) {
+		if (b.y + b.height < 0 || b.y > display.height) {
 			bullets.splice(i, 1);
 			i--;
 			len--;
@@ -287,7 +287,7 @@ function update() {
 	if (frames % lvFrame === 0) {
 		spFrame = (spFrame + 1) % 2;
 
-		var _max = 0, _min = screen.width;
+		var _max = 0, _min = display.width;
 		// iterate through aliens and update postition
 		for (var i = 0, len = aliens.length; i < len; i++) {
 			var a = aliens[i];
@@ -298,7 +298,7 @@ function update() {
 			_min = Math.min(_min, a.x);
 		}
 		// check if aliens should move down and change direction
-		if (_max > screen.width - 30 || _min < 30) {
+		if (_max > display.width - 30 || _min < 30) {
 			// mirror direction and update position
 			dir *= -1;
 			for (var i = 0, len = aliens.length; i < len; i++) {
@@ -313,22 +313,22 @@ function update() {
  * Render the game state to the canvas
  */
 function render() {
-	screen.clear(); // clear the game canvas
+	display.clear(); // clear the game canvas
 	// draw all aliens
 	for (var i = 0, len = aliens.length; i < len; i++) {
 		var a = aliens[i];
-		screen.drawSprite(a.sprite[spFrame], a.x, a.y);
+		display.drawSprite(a.sprite[spFrame], a.x, a.y);
 	}
 	// save contetx and draw bullet then restore
-	screen.ctx.save();
+	display.ctx.save();
 	for (var i = 0, len = bullets.length; i < len; i++) {
-		screen.drawBullet(bullets[i]);
+		display.drawBullet(bullets[i]);
 	}
-	screen.ctx.restore();
+	display.ctx.restore();
 	// draw the city graphics to the canvas
-	screen.ctx.drawImage(cities.canvas, 0, cities.y);
+	display.ctx.drawImage(cities.canvas, 0, cities.y);
 	// draw the tank sprite
-	screen.drawSprite(tank.sprite, tank.x, tank.y);
+	display.drawSprite(tank.sprite, tank.x, tank.y);
 };
 
 // start and run the game
