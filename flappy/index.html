@@ -113,6 +113,13 @@ bird = {
 				}
 				// sets velocity to jump speed for correct rotation
 				this.velocity = this._jump;
+			}else if(this.y <= 0){
+				this.y = 0;
+				if(currentState === states.Game){
+					currentState = states.Score;
+				}
+				this.velocity = this._jump;
+
 			}
 
 			// when bird lack upward momentum increment the rotation
